@@ -6,14 +6,26 @@ sprites.src = './sprites.png';
 const canvas = document.querySelector('canvas');
 const context = canvas.getContext('2d');
 
+const bird = {
+    spriteX: 0,
+    spriteY: 0,
+    width: 34,
+    height: 24,
+    canvasStartX: 10, 
+    canvasStartY: 50,
+    draw () {
+        context.drawImage(
+            sprites,
+            bird.spriteX , bird.spriteY,
+            bird.width , bird.height,
+            bird.canvasStartX , bird.canvasStartY,
+            bird.width , bird.height,
+        );
+    }
+}
+
 function gameLoop(){
-    context.drawImage(
-        sprites,
-        0, 0,
-        34, 24,
-        10, 50,
-        34, 24,
-    );
+    bird.draw(); 
     requestAnimationFrame(gameLoop);
 }
 gameLoop();
