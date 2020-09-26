@@ -13,70 +13,69 @@ const JUMP_SOUND = new Audio();
 JUMP_SOUND.src = "./effects/jump.wav";
 const POINT_SOND = new Audio();
 POINT_SOND.src = "./effects/point.wav";
-//Flappybird
-const bird = {
-  spriteX: 0,
-  spriteY: 0,
-  width: 34,
-  height: 24,
-  canvasX: 10,
-  canvasY: 50,
-  jumpSize: 4.6,
-  bottom: 0,
-  upper: 0,
-  jump() {
-    console.log("pular");
-    console.log("velocidade anterior", bird.speed);
-    bird.speed = -bird.jumpSize;
-    console.log("velocidade atual", bird.speed);
-  },
-  gravity: 0.25,
-  speed: 0,
-  update() {
-    if (makeCollision(bird, floor)) {
-      HIT_SOUND.play();
-      showResults();
-      resetGame();
-      changeScreen(screens.START);
-      return;
-    }
-    bird.speed = bird.speed + bird.gravity;
-    bird.canvasY = bird.canvasY + bird.speed;
-  },
-  movementAnimation: [
-    { spriteX: 0, spriteY: 0 },
-    { spriteX: 0, spriteY: 26 },
-    { spriteX: 0, spriteY: 52 },
-  ],
-  actualFrame: 0,
-  updateActualFrame() {
-    //ENTENDER MELHOR
-    const framesInterval = 10;
-    const intervalGone = frames % framesInterval === 0;
 
-    if (intervalGone) {
-      const incrementBase = 1;
-      const increment = incrementBase + bird.actualFrame;
-      const baseRepetition = bird.movementAnimation.length;
-      bird.actualFrame = increment % baseRepetition;
-    }
-  },
-  draw() {
-    bird.updateActualFrame();
-    const { spriteX, spriteY } = bird.movementAnimation[bird.actualFrame];
-    context.drawImage(
-      sprites,
-      spriteX,
-      spriteY,
-      bird.width,
-      bird.height,
-      bird.canvasX,
-      bird.canvasY,
-      bird.width,
-      bird.height
-    );
-  },
-};
+//Flappybird
+function spawnBird() {
+  const bird = {
+    spriteX: 0,
+    spriteY: 0,
+    width: 34,
+    height: 24,
+    canvasX: 10,
+    canvasY: 150,
+    jumpSize: 4.6,
+    bottom: 0,
+    upper: 0,
+    jump() {
+      bird.speed = -bird.jumpSize;
+    },
+    gravity: 0.25,
+    speed: 0,
+    update() {
+      if (makeCollision(bird, floor)) {
+        HIT_SOUND.play();
+        changeScreen(screens.HOME);
+        return;
+      }
+      bird.speed = bird.speed + bird.gravity;
+      bird.canvasY = bird.canvasY + bird.speed;
+    },
+    movementAnimation: [
+      { spriteX: 0, spriteY: 0 },
+      { spriteX: 0, spriteY: 26 },
+      { spriteX: 0, spriteY: 52 },
+    ],
+    actualFrame: 0,
+    updateActualFrame() {
+      //ENTENDER MELHOR
+      const framesInterval = 10;
+      const intervalGone = frames % framesInterval === 0;
+
+      if (intervalGone) {
+        const incrementBase = 1;
+        const increment = incrementBase + bird.actualFrame;
+        const baseRepetition = bird.movementAnimation.length;
+        bird.actualFrame = increment % baseRepetition;
+      }
+    },
+    draw() {
+      bird.updateActualFrame();
+      const { spriteX, spriteY } = bird.movementAnimation[bird.actualFrame];
+      context.drawImage(
+        sprites,
+        spriteX,
+        spriteY,
+        bird.width,
+        bird.height,
+        bird.canvasX,
+        bird.canvasY,
+        bird.width,
+        bird.height
+      );
+    },
+  };
+  return bird;
+}
 
 //Floor
 const floor = {
@@ -154,6 +153,74 @@ const background = {
   },
 };
 
+function spawnPipes() {
+  const pipes = {
+    width: 52,
+    height: 400,
+    spaceBetween: 70,
+    floorPipe: {
+      spriteX: 0,
+      spriteY: 169,
+    },
+    skyPipe: {
+      spriteX: 52,
+      spriteY: 169,
+    },
+    draw() {
+      pipes.pairs.forEach(function (pair) {
+        const yRandom = pair.y;
+        const skyPipeX = pair.x;
+        const skyPipeY = yRandom;
+        const spaceBetween = 90;
+        //Sky pipe
+        context.drawImage(
+          sprites,
+          pipes.skyPipe.spriteX,
+          pipes.skyPipe.spriteY,
+          pipes.width,
+          pipes.height,
+          skyPipeX,
+          skyPipeY,
+          pipes.width,
+          pipes.height
+        );
+        //Floor pipe
+        const floorPipeX = pair.x;
+        const floorPipeY = pipes.height + spaceBetween + yRandom;
+        context.drawImage(
+          sprites,
+          pipes.floorPipe.spriteX,
+          pipes.floorPipe.spriteY,
+          pipes.width,
+          pipes.height,
+          floorPipeX,
+          floorPipeY,
+          pipes.width,
+          pipes.height
+        );
+      });
+    },
+    pairs: [],
+    update() {
+      let speed = 200;
+      const spawnPipes = frames % speed === 0;
+      if (spawnPipes) {
+        pipes.pairs.push({
+          x: canvas.width,
+          y: -150 * (Math.random() + 1),
+        });
+      }
+      pipes.pairs.forEach(function (pair) {
+        pair.x -= 1;
+        if (pair.x + pipes.width <= 0) {
+          pipes.pairs.shift();
+        }
+      });
+    },
+  };
+  return pipes;
+}
+
 //Start Screen
 const startScreen = {
   spriteX: 134,
@@ -162,8 +229,6 @@ const startScreen = {
   height: 152,
   canvasX: canvas.width / 2 - 87,
   canvasY: 50,
-  gravity: 0.2,
-  speed: 0,
 
   draw() {
     context.drawImage(
@@ -181,60 +246,58 @@ const startScreen = {
 };
 //Screens
 let activeScreen = {};
-
+const globals = {};
 function changeScreen(newScreen) {
   activeScreen = newScreen;
+  if (activeScreen.start) {
+    activeScreen.start();
+  }
 }
 const screens = {};
 
-screens.START = {
+screens.HOME = {
+  start() {
+    globals.bird = spawnBird();
+    globals.pipes = spawnPipes();
+  },
   draw() {
     background.draw();
-    floor.update();
     floor.draw();
-    bird.draw();
+    globals.bird.draw();
     startScreen.draw();
   },
   click() {
     changeScreen(screens.GAME);
   },
-  update() {},
+  update() {
+    floor.update();
+  },
 };
 
 screens.GAME = {
   draw() {
-    startScreen.draw();
+    background.draw();
+    globals.bird.draw();
+    globals.pipes.draw();
+    floor.draw();
   },
   update() {
-    bird.update();
-    background.draw();
-    floor.draw();
     floor.update();
-    bird.draw();
+    globals.bird.update();
+    globals.pipes.update();
   },
   click() {
     JUMP_SOUND.play();
-    bird.jump();
+    globals.bird.jump();
   },
 };
-
-//Games functions
-const globals = {
-  points: 0,
-};
-
-function resetGame() {
-  bird.canvasY = 50;
-  bird.speed = 0;
-  globals.points = 0;
-}
 
 function showResults() {
   let points = globals.points;
   alert(`Você Marcou ${points} pontos`);
 }
 function makeCollision(birdY, floorY) {
-  birdY = bird.canvasY + bird.height;
+  birdY = globals.bird.canvasY + globals.bird.height;
   floorY = floor.canvasY;
 
   if (birdY >= floorY) {
@@ -260,5 +323,5 @@ window.addEventListener("keypress", (event) => {
     activeScreen.click();
   }
 });
-changeScreen(screens.START);
+changeScreen(screens.HOME);
 gameLoop();
