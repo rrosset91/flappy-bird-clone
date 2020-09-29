@@ -1,5 +1,6 @@
 console.log("Flappy Bird - Roger Rosset. Feito com o Guia de Dev Soutinho");
 let frames = 0;
+var points = 0;
 const sprites = new Image();
 sprites.src = "./img/sprites.png";
 const canvas = document.querySelector("canvas");
@@ -17,6 +18,7 @@ POINT_SOND.src = "./effects/point.wav";
 //Flappybird
 function spawnBird() {
   const bird = {
+    name: "bird",
     spriteX: 0,
     spriteY: 0,
     width: 34,
@@ -32,11 +34,6 @@ function spawnBird() {
     gravity: 0.25,
     speed: 0,
     update() {
-      if (makeCollision(bird, floor)) {
-        HIT_SOUND.play();
-        changeScreen(screens.HOME);
-        return;
-      }
       bird.speed = bird.speed + bird.gravity;
       bird.canvasY = bird.canvasY + bird.speed;
     },
@@ -79,6 +76,7 @@ function spawnBird() {
 
 //Floor
 const floor = {
+  name: "floor",
   spriteX: 0,
   spriteY: 610,
   width: 224,
@@ -90,6 +88,11 @@ const floor = {
     const repeatOn = floor.width / 2;
     const movement = floor.canvasX - 1;
     floor.canvasX = movement % repeatOn;
+    if (hasFloorCollision()) {
+      HIT_SOUND.play();
+      changeScreen(screens.HOME);
+      return;
+    }
   },
   draw() {
     context.drawImage(
@@ -155,6 +158,7 @@ const background = {
 
 function spawnPipes() {
   const pipes = {
+    name: "pipes",
     width: 52,
     height: 400,
     spaceBetween: 70,
@@ -172,6 +176,7 @@ function spawnPipes() {
         const skyPipeX = pair.x;
         const skyPipeY = yRandom;
         const spaceBetween = 90;
+
         //Sky pipe
         context.drawImage(
           sprites,
@@ -187,6 +192,8 @@ function spawnPipes() {
         //Floor pipe
         const floorPipeX = pair.x;
         const floorPipeY = pipes.height + spaceBetween + yRandom;
+        pipes.skyPipeCollisionY = pipes.height + skyPipeY;
+        pipes.floorPipeCollisionY = floorPipeY;
         context.drawImage(
           sprites,
           pipes.floorPipe.spriteX,
@@ -201,6 +208,28 @@ function spawnPipes() {
       });
     },
     pairs: [],
+    hasPipeCollision(pair) {
+      const birdHead = globals.bird.canvasY;
+      const birdFoot = birdHead + globals.bird.height;
+      const birdBack = globals.bird.canvasX;
+      const birdFace = birdBack + globals.bird.width;
+      const floorPipeCollisionY =
+        globals.pipes.height + globals.pipes.spaceBetween + pair.y;
+      const skyPipeCollisionY =
+        floorPipeCollisionY - globals.pipes.spaceBetween;
+      if (
+        (birdHead <= skyPipeCollisionY || birdFoot >= floorPipeCollisionY) &&
+        birdFace == pair.x
+      ) {
+        return true;
+      } else {
+        if (birdBack > pair.x + pipes.width) {
+          points++;
+          console.log("Pontuação", points);
+        }
+        return false;
+      }
+    },
     update() {
       let speed = 200;
       const spawnPipes = frames % speed === 0;
@@ -214,6 +243,11 @@ function spawnPipes() {
         pair.x -= 1;
         if (pair.x + pipes.width <= 0) {
           pipes.pairs.shift();
+        }
+        if (pipes.hasPipeCollision(pair)) {
+          HIT_SOUND.play();
+          changeScreen(screens.HOME);
+          return;
         }
       });
     },
@@ -277,8 +311,8 @@ screens.HOME = {
 screens.GAME = {
   draw() {
     background.draw();
-    globals.bird.draw();
     globals.pipes.draw();
+    globals.bird.draw();
     floor.draw();
   },
   update() {
@@ -296,16 +330,17 @@ function showResults() {
   let points = globals.points;
   alert(`Você Marcou ${points} pontos`);
 }
-function makeCollision(birdY, floorY) {
-  birdY = globals.bird.canvasY + globals.bird.height;
-  floorY = floor.canvasY;
-
-  if (birdY >= floorY) {
+function hasFloorCollision() {
+  const bird = globals.bird;
+  const birdBottom = bird.canvasY + bird.height;
+  const floorY = floor.canvasY;
+  if (birdBottom >= floorY) {
     return true;
   } else {
     return false;
   }
 }
+
 function gameLoop() {
   activeScreen.draw();
   activeScreen.update();
